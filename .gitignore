@@ -1,0 +1,15 @@
+docs/*.pdf
+
+Gemini.md
+
+logs/
+
+requirements/
+
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+
+chroma_db/
