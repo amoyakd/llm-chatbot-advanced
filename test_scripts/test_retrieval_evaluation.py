@@ -42,7 +42,7 @@ EVALUATION_QUERIES = [
         "id": 4,
         "query": "Budget camera under $300",
         "expected_collections": ["products"],
-        "notes": "This version of retrieval doesn't filter by price, so we expect semantic results for 'budget camera'."
+        "notes": "Filters by price (< 300) and performs semantic search for 'Budget camera'."
     },
     {
         "id": 5,
@@ -60,7 +60,7 @@ EVALUATION_QUERIES = [
         "id": 7,
         "query": "What TV under $500 do you have?",
         "expected_collections": ["products"],
-        "notes": "No price filtering, so should return TVs based on semantic search."
+        "notes": "Filters by price (< 500) and performs semantic search for 'What TV do you have?'."
     },
     {
         "id": 8,
