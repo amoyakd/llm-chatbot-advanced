@@ -1,8 +1,10 @@
 import logging
 import chromadb
 from sentence_transformers import SentenceTransformer
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 import os
+import json
+import re
 
 # Configure basic logging for debugging and tracing
 # Use a specific logger name for this module
@@ -13,6 +15,17 @@ class RetrievalManager:
     """
     Manages retrieving documents from a ChromaDB vector database based on a user query.
     """
+    # Define a set of common stop words to ignore in category matching
+    STOP_WORDS = {
+        "a", "an", "the", "is", "are", "and", "or", "but", "for", "with",
+        "in", "on", "at", "of", "to", "from", "by", "about", "as", "into",
+        "like", "through", "after", "before", "over", "under", "above", "below",
+        "up", "down", "out", "off", "then", "once", "here", "there", "when",
+        "where", "why", "how", "all", "any", "both", "each", "few", "more",
+        "most", "other", "some", "such", "no", "nor", "not", "only", "own",
+        "same", "so", "than", "too", "very", "s", "t", "can", "will", "just",
+        "don", "should", "now", "compare", "x", "y"
+    }
     def __init__(self, db_path: str = "./chroma_db", model_name: str = 'BAAI/bge-large-en-v1.5'):
         """
         Initializes the RetrievalManager.
@@ -34,6 +47,17 @@ class RetrievalManager:
             logger.error(f"Failed to load sentence-transformer model '{model_name}'. Error: {e}")
             raise
 
+        # Load pre-computed filterable metadata
+        self.filterable_metadata = None
+        try:
+            with open("filterable_metadata.json", "r") as f:
+                self.filterable_metadata = json.load(f)
+            logger.info("Successfully loaded filterable_metadata.json")
+        except FileNotFoundError:
+            logger.warning("filterable_metadata.json not found. Filtering by brand/category will be disabled.")
+        except json.JSONDecodeError:
+            logger.error("Failed to decode filterable_metadata.json. Filtering by brand/category will be disabled.")
+
     def _generate_query_embedding(self, query: str) -> List[float]:
         """
         Generates an embedding for a single query string.
@@ -48,6 +72,104 @@ class RetrievalManager:
         embedding = self.model.encode(query, convert_to_tensor=False)
         logger.info("Finished generating query embedding.")
         return embedding.tolist()
+
+    def _extract_filters(self, query: str) -> Tuple[Dict[str, Any], str]:
+        """
+        Extracts metadata filters (price, brand, category) from the query string
+        and returns a ChromaDB-compatible filter dictionary and a cleaned query.
+
+        Args:
+            query (str): The user's raw query.
+
+        Returns:
+            A tuple containing the `where` filter dictionary and the cleaned query string.
+        """
+        cleaned_query = query
+        filters = []
+        parts_to_remove = []
+
+        # Price filtering
+        price_patterns = {
+            "lt": re.compile(r"(?:under|less than|below|max of|\$lt)\s*\$?(\d+\.?\d*)", re.IGNORECASE),
+            "gt": re.compile(r"(?:over|more than|above|min of|\$gt)\s*\$?(\d+\.?\d*)", re.IGNORECASE),
+        }
+
+        for op, pattern in price_patterns.items():
+            match = pattern.search(cleaned_query)
+            if match:
+                price = float(match.group(1))
+                filters.append({"price": {f"${op}": price}})
+                parts_to_remove.append(match.group(0))
+
+        # Brand and Category filtering
+        if self.filterable_metadata:
+            # Sort by length descending to match longer names first (e.g., "Computers and Laptops" before "Laptops")
+            brands = sorted(self.filterable_metadata.get("brands", []), key=len, reverse=True)
+            categories = sorted(self.filterable_metadata.get("categories", []), key=len, reverse=True)
+
+            for brand in brands:
+                pattern = r'\b' + re.escape(brand) + r'\b'
+                match = re.search(pattern, cleaned_query, re.IGNORECASE)
+                if match:
+                    filters.append({"brand": brand})
+                    # Do not remove brand from query to preserve semantic meaning
+                    break  # Assume only one brand filter is needed
+
+            # New, more flexible category matching logic.
+            # It checks if any significant word from the query appears in an official category name.
+            category_found = False
+            query_lower = cleaned_query.lower()
+
+            # 1. Priority check for "laptop", "computer", or "PC"
+            if any(term in query_lower for term in ["laptop", "computer", "pc"]):
+                # Force category to "Computers and Laptops"
+                for category in self.filterable_metadata.get("categories", []):
+                    if "Computers and Laptops" in category:
+                        filters.append({"category": category})
+                        category_found = True
+                        break
+            
+            # 2. If no priority match, use the flexible matching logic
+            if not category_found:
+                raw_query_words = re.findall(r'\b\w{3,}\b', cleaned_query.lower()) # Extract words of 3+ chars
+                # Filter out stop words from the query words to prevent irrelevant category matches
+                query_words = [word for word in raw_query_words if word not in self.STOP_WORDS]
+
+                for category in categories:
+                    for word in query_words:
+                        # Check if the query word (handling plurals) is a whole word in the category name.
+                        # e.g., query "cameras" will match category "Cameras and Camcorders".
+                        pattern = r'\b' + re.escape(word.rstrip('s')) + r's?\b'
+                        if re.search(pattern, category, re.IGNORECASE):
+                            filters.append({"category": category})
+                            category_found = True
+                            break  # Word found, move to next category
+                    if category_found:
+                        break  # Category found, stop searching
+
+
+        # # [DEACTIVATED] Remove only the identified price-related parts from the query.
+        # # This has been deactivated because it weakens the semantic query, leading to less precise results.
+        # # The full query context is now preserved for the embedding model.
+        # for part in parts_to_remove:
+        #     cleaned_query = cleaned_query.replace(part, "", 1)
+
+        # Construct the final filter dictionary
+        where_filter = {}
+        if filters:
+            if len(filters) > 1:
+                where_filter = {"$or": filters}
+            else:
+                where_filter = filters[0]
+        
+        # # [DEACTIVATED] Final cleanup of extra spaces.
+        # cleaned_query = ' '.join(cleaned_query.split()).strip()
+
+        if where_filter:
+            logger.info(f"Extracted filter: {where_filter}")
+            logger.info(f"Cleaned query for embedding: '{cleaned_query}'")
+
+        return where_filter, cleaned_query
 
     def _route_query(self, query: str) -> List[str]:
         """
@@ -99,15 +221,22 @@ class RetrievalManager:
         """
         logger.info(f"--- Starting search for query: '{query}' ---")
 
-        # Step 1: Determine which collections to search
+        # Step 1: Extract filters and get the cleaned query
+        where_filter, cleaned_query = self._extract_filters(query)
+
+        # If cleaning results in an empty string, fall back to the original query for embedding
+        embedding_query = cleaned_query if cleaned_query else query
+        logger.info(f"Using query for embedding: '{embedding_query}'")
+
+        # Step 2: Determine which collections to search based on the original query's intent
         target_collections = self._route_query(query)
         
-        # Step 2: Generate an embedding for the query
-        query_embedding = self._generate_query_embedding(query)
+        # Step 3: Generate an embedding for the (potentially cleaned) query
+        query_embedding = self._generate_query_embedding(embedding_query)
         
         results = {}
 
-        # Step 3: Query each targeted collection
+        # Step 4: Query each targeted collection with the filter
         for collection_name in target_collections:
             try:
                 collection = self.client.get_collection(name=collection_name)
@@ -115,11 +244,12 @@ class RetrievalManager:
                 # Set the number of results based on the collection type
                 n_results = 5 if collection_name == "products" else 8
 
-                logger.info(f"Querying '{collection_name}' collection with n_results={n_results}...")
+                logger.info(f"Querying '{collection_name}' collection with n_results={n_results} and filter={where_filter}...")
 
                 retrieved = collection.query(
                     query_embeddings=[query_embedding],
-                    n_results=n_results
+                    n_results=n_results,
+                    where=where_filter if where_filter else None
                 )
                 results[collection_name] = retrieved
                 logger.info(f"Retrieved {len(retrieved.get('ids', [[]])[0])} results from '{collection_name}'.")
@@ -157,7 +287,9 @@ if __name__ == '__main__':
                 "Lightweight laptop",
                 "What do customers say about battery life?",
                 "SmartX ProPhone camera reviews",
-                "Any feedback on the AudioBliss headphones?"
+                "Any feedback on the AudioBliss headphones?",
+                "Show me TVs under $500",
+                "TechPro gaming laptops over $1000"
             ]
 
             for query in queries:
