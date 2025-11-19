@@ -130,24 +130,60 @@ class RetrievalManager:
                         break
             
             # 2. If no priority match, use the flexible matching logic
-            if not category_found:
-                raw_query_words = re.findall(r'\b\w{3,}\b', cleaned_query.lower()) # Extract words of 3+ chars
-                # Filter out stop words from the query words to prevent irrelevant category matches
-                query_words = [word for word in raw_query_words if word not in self.STOP_WORDS]
+            # if not category_found:
+            #     raw_query_words = re.findall(r'\b\w{3,}\b', cleaned_query.lower()) # Extract words of 3+ chars
+            #     # Filter out stop words from the query words to prevent irrelevant category matches
+            #     query_words = [word for word in raw_query_words if word not in self.STOP_WORDS]
 
-                for category in categories:
-                    for word in query_words:
-                        # Check if the query word (handling plurals) is a whole word in the category name.
-                        # e.g., query "cameras" will match category "Cameras and Camcorders".
-                        pattern = r'\b' + re.escape(word.rstrip('s')) + r's?\b'
-                        if re.search(pattern, category, re.IGNORECASE):
-                            filters.append({"category": category})
-                            category_found = True
-                            break  # Word found, move to next category
-                    if category_found:
-                        break  # Category found, stop searching
+            #     for category in categories:
+            #         for word in query_words:
+            #             # Check if the query word (handling plurals) is a whole word in the category name.
+            #             # e.g., query "cameras" will match category "Cameras and Camcorders".
+            #             pattern = r'\b' + re.escape(word.rstrip('s')) + r's?\b'
+            #             if re.search(pattern, category, re.IGNORECASE):
+            #                 filters.append({"category": category})
+            #                 category_found = True
+            #                 break  # Word found, move to next category
+            #         if category_found:
+            #             break  # Category found, stop searching
 
+            # Category search based on synonyms
+            # Category search based on synonyms with priority ordering
+            CATEGORY_SYNONYMS = {
+                "Computers and Laptops": ["laptop", "computer", "notebook", "ultrabook", \
+                                          "chromebook", "PC", "desktop", "workstation", "gaming laptop"],
+                "Cameras and Camcorders": ["camera", "camcorder", "photo", "video camera"],
+                "Gaming Consoles and Accessories": ["console", "gaming", "games", "controller"],
+                "Smartphones and Accessories": ["phone", "smartphone", "mobile", "case", "charger"],
+                "Audio Equipment": ["audio", "speaker", "headphone", "earbud", "sound"],
+                "Televisions and Home Theater Systems": ["TV", "television", "home theater", "soundbar"]
+            }
 
+            # Priority list: categories to check first (more specific synonyms)
+            priority_categories = ["Computers and Laptops", "Cameras and Camcorders", "Smartphones and Accessories"]
+            
+            matched_categories = set()
+            query_lower = query.lower()
+
+            # Phase 1: Check priority categories for multi-word synonyms first
+            for category in priority_categories:
+                multi_word_synonyms = [syn for syn in CATEGORY_SYNONYMS[category] if len(syn.split()) > 1]
+                for syn in multi_word_synonyms:
+                    if syn in query_lower:
+                        matched_categories.add(category)
+                        break
+
+            # Phase 2: If no priority multi-word matches, check all single-word synonyms
+            if not matched_categories:
+                for category in CATEGORY_SYNONYMS.keys():
+                    single_word_synonyms = [syn for syn in CATEGORY_SYNONYMS[category] if len(syn.split()) == 1]
+                    if any(syn in query_lower for syn in single_word_synonyms):
+                        matched_categories.add(category)
+
+            # Add all matched categories to filters
+            for category in matched_categories:
+                filters.append({"category": category})
+                category_found = True
         # # [DEACTIVATED] Remove only the identified price-related parts from the query.
         # # This has been deactivated because it weakens the semantic query, leading to less precise results.
         # # The full query context is now preserved for the embedding model.

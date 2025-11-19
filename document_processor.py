@@ -367,10 +367,12 @@ def prepare_product_documents(products_file_path: str) -> List[Dict[str, Any]]:
             features_text = ', '.join(product.get('features', []))
             text_for_embedding = (
                 f"Product: {product.get('name', '')}, "
+                f"Model Number: {product.get('model_number', '')}, "
                 f"Brand: {product.get('brand', '')}, "
                 f"Category: {product.get('category', '')}. "
                 f"Features: {features_text}. "
                 f"Description: {product.get('description', '')}"
+                f"Warranty: {product.get('warranty', '')}"
             )
 
             # 3. Prepare Metadata
@@ -380,7 +382,8 @@ def prepare_product_documents(products_file_path: str) -> List[Dict[str, Any]]:
                 "model_number": product.get('model_number'),
                 "category": product.get('category'),
                 "brand": product.get('brand'),
-                "price": product.get('price')
+                "price": product.get('price'),
+                "warranty": product.get('warranty')
             }
             
             # Remove None values from metadata
@@ -433,7 +436,7 @@ def prepare_review_documents(reviews_file_path: str, products_file_path: str) ->
             details['model_number']: {
                 "category": details.get('category'),
                 "brand": details.get('brand'),
-                "product_name": details.get('name')
+                "product_name": details.get('name'),
             } for _, details in products_data.items()
         }
 

@@ -13,8 +13,8 @@ from retrieval_manager import RetrievalManager
 import llm_interface
 
 # --- Configuration ---
-TEST_QUERIES_FILE = "requirements/test_initial_chatbot.md"
-OUTPUT_HTML_FILE = "logs/chatbot_test_report.html"
+TEST_QUERIES_FILE = "./test_user_queries.md"
+OUTPUT_HTML_FILE = "logs/chatbot_test_report_revised.html"
 
 # --- HTML Template ---
 HTML_TEMPLATE = """

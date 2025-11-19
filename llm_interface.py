@@ -62,7 +62,10 @@ def generate_response(query: str, retrieved_docs: list, history: list) -> str:
             5.  Do not fabricate or assume any information not present in the documents.
             6.  Analyze the chat history provided under 'Chat History' for conversational context, \
                 but do not use it as a source for answers.
-            7.  Keep your answers concise and directly related to the query.
+            7.  Respond in a friendly and helpful tone, with concise answers and directly related to the query.\
+            8.  Make sure to ask the user relevant follow-up questions.\
+            9.  Always format prices with a dollar sign and two decimal places.\
+            10. Do not use the term 'Retrieved Documents' in your response. It is only for your reference.
             
 
 Retrieved Documents:

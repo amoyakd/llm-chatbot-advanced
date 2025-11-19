@@ -71,6 +71,8 @@ def respond(message, chat_history):
                 metadata_parts.append(f"Price: ${metadata['price']:.2f}")
             if 'rating' in metadata:
                 metadata_parts.append(f"Rating: {metadata['rating']} out of 5")
+            if 'warranty' in metadata:
+                metadata_parts.append(f"Warranty: {metadata['warranty']}")
             
             if metadata_parts:
                 enhanced_content += "\n" + ", ".join(metadata_parts)
