@@ -101,3 +101,85 @@ Chat History:
     except Exception as e:
         print(f"Error during response generation: {e}")
         return "I'm sorry, but I encountered an error while trying to generate a response."
+
+
+
+def rewrite_query(query: str, history: list) -> str:
+    """
+    Rewrites a conversational query into a self-contained query using the chat history.
+
+    Args:
+        query: The user's potentially vague query.
+        history: The chat history from Gradio.
+
+    Returns:
+        A self-contained query.
+    """
+    system_prompt = """You are an expert at query rewriting. Your task is to rewrite a given 'user query' \
+        into a self-contained, specific query that can be understood without the context of the 'chat history'.
+        
+        Follow these rules strictly:
+        1.  Analyze the 'chat history' to understand the context of the conversation.
+        2.  Identify any pronouns (e.g., 'it', 'its', 'they', 'that') or vague references in the 'user query'.
+        3.  Replace these pronouns and vague references with the specific entities or topics they refer to from the chat history.
+        4.  If the 'user query' is already self-contained and specific, return it unchanged.
+        5.  CRITICAL: If the 'user query' is about a completely new topic not covered in the chat history, you MUST return it unchanged. Do NOT try to connect it to the previous conversation.
+        6.  The rewritten query should be a single, clear question or statement.
+        7.  Output ONLY the rewritten query, with no extra text, labels, or explanations.
+
+        Here are some examples of how to behave:
+
+        ---
+        Example 1: Rewriting a contextual query
+        Chat History:
+        User: Do you have the TechPro Ultrabook in stock?
+        Assistant: Yes, the TechPro Ultrabook (TP-UB100) is available.
+        User query: 'Tell me about its warranty.'
+        Rewritten query: 'What is the warranty for the TechPro Ultrabook (TP-UB100)?'
+        ---
+        Example 2: Handling a topic change
+        Chat History:
+        User: Do you have the TechPro Ultrabook in stock?
+        Assistant: Yes, the TechPro Ultrabook (TP-UB100) is available.
+        User query: 'Okay, do you have any monitors?'
+        Rewritten query: 'Okay, do you have any monitors?'
+        ---
+        Example 3: Handling a self-contained query
+        Chat History:
+        User: What's the price of the BlueWave Gaming Laptop?
+        Assistant: The BlueWave Gaming Laptop (BW-GL200) is $1299.99.
+        User query: 'What is the price of the GameSphere X console?'
+        Rewritten query: 'What is the price of the GameSphere X console?'
+        ---
+
+        Chat History:
+        {chat_history}
+        """
+
+    # Format chat history for the prompt
+    formatted_history = "\n".join([f"User: {user_msg}\nAssistant: {bot_msg}" for user_msg, bot_msg in history])
+
+    prompt = system_prompt.format(chat_history=formatted_history)
+    
+    messages = [
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": f"User query: '{query}'"},
+    ]
+    
+    try:
+        response = ollama.chat(
+            model="llama3.2", # Using a powerful model for this is a good idea
+            messages=messages,
+            options={'temperature': 0}
+        )
+        rewritten = response["message"]["content"].strip()
+        # Remove potential quotes around the rewritten query
+        if rewritten.startswith('"') and rewritten.endswith('"'):
+            rewritten = rewritten[1:-1]
+        if rewritten.startswith("'") and rewritten.endswith("'"):
+            rewritten = rewritten[1:-1]
+            
+        return rewritten
+    except Exception as e:
+        print(f"Error during query rewrite: {e}")
+        return query # Fallback to original query on error

@@ -222,7 +222,8 @@ class RetrievalManager:
         # Keywords that suggest a user is interested in opinions or experiences
         review_keywords = ["review", "customer", "feedback", "complaints", "say about", "opinion", "experience"]
         # Keywords that suggest a user is interested in product details
-        product_keywords = ["specs", "features", "have", "available", "do you have", "specification", "technical details"]
+        product_keywords = ["specs", "features", "have", "available", "do you have", \
+                            "specification", "technical details", "price", "warranty"]
 
         target_collections = []
 

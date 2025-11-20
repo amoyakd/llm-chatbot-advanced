@@ -35,8 +35,12 @@ def respond(message, chat_history):
         # Return empty list for documents
         return "", chat_history, []
 
-    # 3. Retrieve relevant documents by calling the correct 'search' method
-    search_results = retriever.search(message)
+    # 3. Rewrite the query for context
+    rewritten_query = llm_interface.rewrite_query(message, chat_history)
+    logger.info(f"Original query: '{message}' | Rewritten query: '{rewritten_query}'")
+
+    # 4. Retrieve relevant documents by calling the correct 'search' method
+    search_results = retriever.search(rewritten_query)
     
     # Process the search results from the dictionary into a flat list of tuples
     retrieved_docs = []
@@ -80,14 +84,13 @@ def respond(message, chat_history):
         
     # --- END CHANGE: Incorporate metadata into the content for the LLM ---
 
-    # 4. Generate a response using the LLM
-    logger.info(f"Document for LLM:\n{doc_contents}\n---")
+    # 5. Generate a response using the LLM
     response = llm_interface.generate_response(message, doc_contents, chat_history)
     
-    # 5. Append the user message and bot response to the history
+    # 6. Append the user message and bot response to the history
     chat_history.append((message, response))
     
-    # 6. Return values to update the Gradio UI
+    # 7. Return values to update the Gradio UI
     # The JSON component expects a serializable object (like a list of dicts)
     docs_for_display = [
         {"content": content, "metadata": metadata} for content, metadata in retrieved_docs
@@ -103,7 +106,7 @@ with gr.Blocks(theme=gr.themes.Soft(primary_hue="slate", secondary_hue="blue")) 
     chatbot = gr.Chatbot(
         height=550,
         show_label=False,
-        avatar_images=("👤", "🤖"),
+        avatar_images=("static/images/user.png", "static/images/bot.png"),
         bubble_full_width=False,
     )
     
