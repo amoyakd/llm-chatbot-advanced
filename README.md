@@ -1,6 +1,6 @@
 # 🛍️ Product Inquiry Chatbot
 
-This project is a sophisticated, local-first RAG (Retrieval-Augmented Generation) chatbot designed to answer questions about a product catalog and reviews. It leverages local language models via Ollama, ensuring privacy and offline capability.
+This project is a local-first RAG (Retrieval-Augmented Generation) chatbot designed to answer questions about a product catalog and reviews. It leverages local language models via Ollama, ensuring privacy and offline capability.
 
 The chatbot provides a user-friendly web interface built with Gradio, where users can ask questions in natural language. The system intelligently retrieves relevant product information and customer reviews to generate accurate and context-aware answers.
 
@@ -58,7 +58,7 @@ This project relies on local LLMs served by [Ollama](https://ollama.com/).
 
 ### 3. Prepare the Data and Vector Database
 
-Before you can run the chatbot, you need to process the product data and populate the vector database. This data is available \
+Before you can run the chatbot, you need to process the product data and populate the vector database. This data is available 
 in json format in the `products.json` and `product_reviews.json` files. 
 
 1.  **Precompute Filterable Metadata**: This script creates a file with all available brands and categories, which helps with search filtering.
