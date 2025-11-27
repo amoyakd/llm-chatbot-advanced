@@ -105,3 +105,10 @@ Here is a breakdown of the most important files in the project:
 -   `test_user_queries.md`: A markdown file containing a list of queries to test the chatbot's performance.
 -   `docs/`: Contains additional documentation, such as text files used for testing document processing.
 -   `static/`: Contains static assets for the Gradio UI, like user and bot avatar images.
+
+
+# Potential Improvements for Future
+1. Fine tuning of metadata filters
+2. Better routing logic rather than the simple deterministic one we have at the moment
+3. Better context-awareness
+4. Better extraction of categories and products from user query (either LLM-based or stemming to handle plurals)

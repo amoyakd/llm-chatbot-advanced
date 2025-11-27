@@ -150,13 +150,13 @@ class RetrievalManager:
             # Category search based on synonyms
             # Category search based on synonyms with priority ordering
             CATEGORY_SYNONYMS = {
-                "Computers and Laptops": ["laptop", "computer", "notebook", "ultrabook", \
+                "Computers and Laptops": ["laptop", "laptops", "computer", "notebook", "ultrabook", \
                                           "chromebook", "PC", "desktop", "workstation", "gaming laptop"],
-                "Cameras and Camcorders": ["camera", "camcorder", "photo", "video camera"],
+                "Cameras and Camcorders": ["camera", "cameras", "camcorder", "photo", "video camera"],
                 "Gaming Consoles and Accessories": ["console", "gaming", "games", "controller"],
                 "Smartphones and Accessories": ["phone", "smartphone", "mobile", "case", "charger"],
                 "Audio Equipment": ["audio", "speaker", "headphone", "earbud", "sound"],
-                "Televisions and Home Theater Systems": ["TV", "television", "home theater", "soundbar"]
+                "Televisions and Home Theater Systems": ["tv", "television", "home theater", "soundbar", "tvs"]
             }
 
             # Priority list: categories to check first (more specific synonyms)

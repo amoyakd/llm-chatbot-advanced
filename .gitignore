@@ -6,6 +6,8 @@ logs/
 
 requirements/
 
+blog/
+
 venv/
 __pycache__/
 *.pyc
