@@ -1,4 +1,4 @@
-# Chatbot Performance Comparison: Prompt Engineering vs. RAG
+# Chatbot Performance Comparison: Prompt Engineering vs. RAG (Google Gemini)
 
 This document provides a complete evaluation of two product inquiry chatbots based on their responses to a common set of 20 user queries.
 

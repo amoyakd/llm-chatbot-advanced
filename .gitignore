@@ -15,3 +15,5 @@ __pycache__/
 .env
 
 chroma_db/
+
+misc/chatgpt_chatbot_compare.md
