@@ -102,15 +102,15 @@ def respond(message, chat_history):
     return "", chat_history, docs_for_display
 
 # --- Gradio UI Definition ---
-with gr.Blocks(theme=gr.themes.Soft(primary_hue="slate", secondary_hue="blue")) as demo:
+with gr.Blocks() as demo:
     gr.Markdown("# 🛍️ Product Inquiry Chatbot")
     gr.Markdown("Ask me anything about our products and I will do my best to answer based on the information I have.")
     
     chatbot = gr.Chatbot(
         height=550,
         show_label=False,
-        avatar_images=("static/images/user.png", "static/images/bot.png"),
-        bubble_full_width=False,
+        avatar_images=("static/images/user.png", "static/images/bot.png")
+        #bubble_full_width=False,
     )
     
     with gr.Row():
@@ -142,4 +142,4 @@ with gr.Blocks(theme=gr.themes.Soft(primary_hue="slate", secondary_hue="blue")) 
 
 if __name__ == "__main__":
     print("Starting Gradio app... Access it at http://127.0.0.1:7860")
-    demo.launch()
+    demo.launch(theme=gr.themes.Soft(primary_hue="slate", secondary_hue="blue"))
