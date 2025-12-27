@@ -3,6 +3,8 @@ from retrieval_manager import RetrievalManager
 import llm_interface
 import json
 import logging
+import os
+from vector_db_manager import run_etl_pipeline
 
 from dotenv import load_dotenv
 load_dotenv()  # Loads .env file automatically
@@ -11,8 +13,40 @@ load_dotenv()  # Loads .env file automatically
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
+# --- Database and Model Configuration ---
+DB_PATH = "./chroma_db"
+EMBEDDING_MODEL = 'BAAI/bge-large-en-v1.5'
+PRODUCTS_JSON_PATH = 'products.json'
+REVIEWS_JSON_PATH = 'product_reviews.json'
+
+# --- Check for and Build VectorDB if it doesn't exist ---
+# This is crucial for environments like HF Spaces where the file system is ephemeral.
+if not os.path.exists(DB_PATH):
+    logger.info(f"ChromaDB path '{DB_PATH}' not found. Running ETL pipeline to create and populate the database.")
+    logger.info("This may take a few moments...")
+    
+    # Check if data files exist before running ETL
+    if not os.path.exists(PRODUCTS_JSON_PATH) or not os.path.exists(REVIEWS_JSON_PATH):
+        logger.error(f"FATAL: Required data files ('{PRODUCTS_JSON_PATH}' or '{REVIEWS_JSON_PATH}') not found.")
+        # Exit if data is missing, as the app cannot function
+        exit()
+    
+    try:
+        run_etl_pipeline(
+            products_file=PRODUCTS_JSON_PATH,
+            reviews_file=REVIEWS_JSON_PATH,
+            db_path=DB_PATH,
+            model_name=EMBEDDING_MODEL
+        )
+        logger.info("ETL pipeline completed successfully.")
+    except Exception as e:
+        logger.error(f"FATAL: An error occurred during the ETL pipeline: {e}", exc_info=True)
+        # Exit if the ETL fails, as the app cannot function
+        exit()
+
 # 1. Instantiate the retrieval manager
-retriever = RetrievalManager()
+# It will now connect to the newly created or existing database
+retriever = RetrievalManager(db_path=DB_PATH, model_name=EMBEDDING_MODEL)
 
 def respond(message, chat_history):
     """
