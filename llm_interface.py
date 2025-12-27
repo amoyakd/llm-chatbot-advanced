@@ -293,7 +293,13 @@ def generate_response(query: str, retrieved_docs: list, history: list) -> str:
     context = "\n\n---\n\n".join(doc for doc in retrieved_docs)
     
     # Format chat history for the prompt
-    formatted_history = "\n".join([f"User: {user_msg}\nAssistant: {bot_msg}" for user_msg, bot_msg in history])
+    #formatted_history = "\n".join([f"User: {user_msg}\nAssistant: {bot_msg}" for user_msg, bot_msg in history])
+    formatted_history = ""
+    for msg in history:
+        if msg["role"] == "user":
+            formatted_history += f"User: {msg['content']}\n"
+        elif msg["role"] == "assistant":
+            formatted_history += f"Assistant: {msg['content']}\n"
 
     prompt = system_prompt.format(context=context, chat_history=formatted_history)
 
@@ -357,7 +363,13 @@ def rewrite_query(query: str, history: list) -> str:
         """
 
     # Format chat history for the prompt
-    formatted_history = "\n".join([f"User: {user_msg}\nAssistant: {bot_msg}" for user_msg, bot_msg in history])
+    #formatted_history = "\n".join([f"User: {user_msg}\nAssistant: {bot_msg}" for user_msg, bot_msg in history])
+    formatted_history = ""
+    for msg in history:
+        if msg["role"] == "user":
+            formatted_history += f"User: {msg['content']}\n"
+        elif msg["role"] == "assistant":
+            formatted_history += f"Assistant: {msg['content']}\n"
 
     prompt = system_prompt.format(chat_history=formatted_history)
     

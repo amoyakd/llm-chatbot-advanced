@@ -19,31 +19,6 @@ EMBEDDING_MODEL = 'BAAI/bge-large-en-v1.5'
 PRODUCTS_JSON_PATH = 'products.json'
 REVIEWS_JSON_PATH = 'product_reviews.json'
 
-# # --- Check for and Build VectorDB if it doesn't exist ---
-# # This is crucial for environments like HF Spaces where the file system is ephemeral.
-# if not os.path.exists(DB_PATH):
-#     logger.info(f"ChromaDB path '{DB_PATH}' not found. Running ETL pipeline to create and populate the database.")
-#     logger.info("This may take a few moments...")
-    
-#     # Check if data files exist before running ETL
-#     if not os.path.exists(PRODUCTS_JSON_PATH) or not os.path.exists(REVIEWS_JSON_PATH):
-#         logger.error(f"FATAL: Required data files ('{PRODUCTS_JSON_PATH}' or '{REVIEWS_JSON_PATH}') not found.")
-#         # Exit if data is missing, as the app cannot function
-#         exit()
-    
-#     try:
-#         run_etl_pipeline(
-#             products_file=PRODUCTS_JSON_PATH,
-#             reviews_file=REVIEWS_JSON_PATH,
-#             db_path=DB_PATH,
-#             model_name=EMBEDDING_MODEL
-#         )
-#         logger.info("ETL pipeline completed successfully.")
-#     except Exception as e:
-#         logger.error(f"FATAL: An error occurred during the ETL pipeline: {e}", exc_info=True)
-#         # Exit if the ETL fails, as the app cannot function
-#         exit()
-
 # 1. Instantiate the retrieval manager
 # It will now connect to the newly created or existing database
 retriever = RetrievalManager(db_path=DB_PATH, model_name=EMBEDDING_MODEL)
@@ -68,18 +43,18 @@ def respond(message, chat_history):
     # 2. Moderate the user's query
     if not llm_interface.moderate_query(message):
         response = "I'm sorry, but your query violates our safety guidelines. I cannot process this request."
-        chat_history.append((message, response))
-        # Return empty list for documents
+        chat_history.append({"role": "user", "content": message})
+        chat_history.append({"role": "assistant", "content": response})
         return "", chat_history, []
 
     # 3. Rewrite the query for context
     rewritten_query = llm_interface.rewrite_query(message, chat_history)
     logger.info(f"Original query: '{message}' | Rewritten query: '{rewritten_query}'")
 
-    # 4. Retrieve relevant documents by calling the correct 'search' method
+    # 4. Retrieve relevant documents
     search_results = retriever.search(rewritten_query)
     
-    # Process the search results from the dictionary into a flat list of tuples
+    # Process the search results
     retrieved_docs = []
     for collection_name, results in search_results.items():
         if results and results.get('documents') and results['documents'][0]:
@@ -88,18 +63,11 @@ def respond(message, chat_history):
             for i, doc_content in enumerate(docs):
                 retrieved_docs.append((doc_content, metadatas[i]))
 
-    # --- START CHANGE: Incorporate metadata into the content for the LLM ---
-    # Previously, only the raw content (doc[0]) was passed to the LLM.
-    # This change ensures that key metadata fields, such as 'price', 'product_name',
-    # 'brand', and 'category', are explicitly included in the document string
-    # that the LLM processes. This makes the LLM aware of these details,
-    # allowing it to answer questions that rely on metadata.
+    # Incorporate metadata into content for LLM
     doc_contents = []
     for content, metadata in retrieved_docs:
-        # Start with the original document content
         enhanced_content = content
         
-        # # Append key metadata fields if they exist
         if metadata:
             metadata_parts = []
             if 'product_name' in metadata and metadata['product_name'] not in enhanced_content:
@@ -118,17 +86,15 @@ def respond(message, chat_history):
             if metadata_parts:
                 enhanced_content += "\n" + ", ".join(metadata_parts)
         doc_contents.append(enhanced_content)
-        
-    # --- END CHANGE: Incorporate metadata into the content for the LLM ---
 
     # 5. Generate a response using the LLM
     response = llm_interface.generate_response(message, doc_contents, chat_history)
     
-    # 6. Append the user message and bot response to the history
-    chat_history.append((message, response))
+    # 6. Append messages in Gradio 6.0 format
+    chat_history.append({"role": "user", "content": message})
+    chat_history.append({"role": "assistant", "content": response})
     
     # 7. Return values to update the Gradio UI
-    # The JSON component expects a serializable object (like a list of dicts)
     docs_for_display = [
         {"content": content, "metadata": metadata} for content, metadata in retrieved_docs
     ]
