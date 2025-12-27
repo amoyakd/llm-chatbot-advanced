@@ -1,0 +1,26 @@
+{
+    "brands": [
+        "ActionCam",
+        "AudioPhonic",
+        "BlueWave",
+        "CineView",
+        "FotoSnap",
+        "GameSphere",
+        "MobiTech",
+        "PowerLite",
+        "ProGamer",
+        "SmartX",
+        "SoundMax",
+        "TechPro",
+        "WaveSound",
+        "ZoomMaster"
+    ],
+    "categories": [
+        "Audio Equipment",
+        "Cameras and Camcorders",
+        "Computers and Laptops",
+        "Gaming Consoles and Accessories",
+        "Smartphones and Accessories",
+        "Televisions and Home Theater Systems"
+    ]
+}
